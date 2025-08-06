@@ -11,6 +11,7 @@ global:
 
 lagoon-build-deploy:
   enabled: true
+  lagoonTargetName: cozone
   lagoonFeatureFlagForceRWX2RWO: enabled
     #unauthenticatedRegistry: registry-harbor-registry.lagoon.svc:5000
   rabbitMQUsername: lagoon

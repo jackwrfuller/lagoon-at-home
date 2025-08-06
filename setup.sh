@@ -36,7 +36,7 @@ kubectl apply -f config/metallb.yml
 
 echo "Installing Cert Manager"
 helm upgrade --install --create-namespace -n cert-manager --wait cert-manager jetstack/cert-manager -f values/cert-manager.yml
-kubectl -n lagoon-core apply -f config/lagoon-issuer.yml
+kubectl apply -f config/lagoon-issuer.yml
 
 #helm show crds prometheus-community/kube-prometheus-stack | kubectl apply -f -
 #
@@ -74,6 +74,64 @@ kubectl apply -f config/bulk-storage.yml
 helm upgrade --install --create-namespace --namespace lagoon -f values/lagoon-remote.yml lagoon-remote lagoon/lagoon-remote
 
 
+echo "Checking JWT is installed."
+if ! command -v jwt >/dev/null 2>&1; then
+	echo "JWT not found, installing now..."
+	TMPDIR=$(mktemp -d) \
+		&& curl -sSL https://github.com/mike-engel/jwt-cli/releases/download/6.2.0/jwt-linux.tar.gz | tar -xzC $TMPDIR \
+		&& sudo mv $TMPDIR/jwt /usr/local/bin/jwt \
+		&& rm -rf $TMPDIR \
+		&& chmod a+x /usr/local/bin/jwt
+else
+	echo "JWT already installed."
+fi
+
+echo "Checking JQ is installed."
+if ! command -v jq >/dev/null 2>&1; then
+	echo "JQ not found, installing now..."
+	sudo apt update && sudo apt install -y jq
+else
+	echo "JQ already installed."
+fi
+
+echo "Obtaining Legacy Token"
+JWTUSER=localadmin; \
+JWTAUDIENCE=api.dev; \
+JWTSECRET=$(kubectl get secret -n lagoon-core lagoon-core-secrets -o json | jq -r '.data.JWTSECRET | @base64d'); \
+TOKEN=$(jwt encode --alg HS256 --no-iat --payload role=admin --iss "$JWTUSER" --aud "$JWTAUDIENCE" --sub "$JWTUSER" --secret "$JWTSECRET")
+echo "TOKEN: ${TOKEN}"
+
+echo "Checking LagoonCLI is installed."
+if ! command -v lagoon >/dev/null 2>&1; then
+	echo "LagoonCLI not found, installing now..."
+	sudo curl -L "https://github.com/uselagoon/lagoon-cli/releases/download/v0.32.0/lagoon-cli-v0.32.0-linux-amd64" \
+		-o /usr/local/bin/lagoon \
+		&& sudo chmod +x /usr/local/bin/lagoon
+else
+	echo "LagoonCLI already installed."
+fi
+
+echo "Adding cluster to lagoon"
+lagoon config add \
+	--graphql https://api.lagoon.jwrf.au/graphql \
+	--ui https://dashboard.lagoon.jwrf.au \
+	--hostname 192.168.1.242 \
+	--lagoon cozone \
+	--port 2020
+lagoon config default --lagoon cozone
+
+echo "Setting up LagoonCLI"
+lagoon add user-sshkey --email jwrf@example.com --pubkey /home/jwrf/.ssh/id_ed25519.pub
+lagoon login
+
+echo "Configuring deploy targets"
+lagoon add deploytarget \
+	--name cozone \
+	--token $TOKEN \
+	--console-url https://172.17.0.1:16643 \
+	--router-pattern='${environment}-${project}.app.lagoon.jwrf.au'
+DEPLOYTARGET_ID=$(lagoon list deploytargets --output-json | jq -r '.data[0].id')
+lagoon add organization-deploytarget -O cozone -D $DEPLOYTARGET_ID
 
 
 

@@ -5,6 +5,7 @@ expose:
       kubernetes.io/tls-acme: "true"
       nginx.ingress.kubernetes.io/proxy-buffering: "off"
       nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
     hosts:
       core: harbor.lagoon.jwrf.au
   tls:
