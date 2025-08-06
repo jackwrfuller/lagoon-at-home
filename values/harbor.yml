@@ -1,0 +1,28 @@
+expose:
+  ingress:
+    className: nginx
+    annotations:
+      kubernetes.io/tls-acme: "true"
+      nginx.ingress.kubernetes.io/proxy-buffering: "off"
+      nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    hosts:
+      core: harbor.lagoon.jwrf.au
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-ingress
+externalURL: https://harbor.lagoon.jwrf.au
+harborAdminPassword: password
+chartmuseum:
+  enabled: false
+clair:
+  enabled: false
+notary:
+  enabled: false
+trivy:
+  enabled: false
+jobservice:
+  jobLogger: stdout
+registry:
+  relativeurls: true

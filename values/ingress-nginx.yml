@@ -1,0 +1,17 @@
+controller:
+  allowSnippetAnnotations: true
+  enableAnnotationValidations: false
+  service:
+    type: LoadBalancer
+    nodePorts:
+      http: 32080
+      https: 32443
+  config:
+    annotations-risk-level: Critical
+    proxy-body-size: 0
+    hsts: false
+  watchIngressWithoutClass: true
+  ingressClassResource:
+    default: true
+  addHeaders:
+    X-Lagoon: "remote>ingress-nginx>$namespace:$service_name"

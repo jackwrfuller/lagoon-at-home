@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lagoon-remote-nats
+spec:
+  secretName: lagoon-remote-nats-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "lagoon-core-nats-concentrator.lagoon-core.svc"
+  issuerRef:
+    kind: ClusterIssuer
+    name: lagoon-issuer

@@ -1,0 +1,11 @@
+templates:
+  enabled: false
+idling:
+  enabled: true
+  serviceCron: "0,15,30,45 * * * *"
+  podCheckInterval: 5m
+  prometheusCheckInterval: 5m
+  prometheusEndpoint: "http://kube-prometheus-kube-prome-prometheus.kube-prometheus.svc:9090"
+unidling:
+  verifyRequests:
+    enabled: false

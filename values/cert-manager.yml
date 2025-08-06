@@ -1,0 +1,5 @@
+installCRDs: true
+ingressShim:
+  defaultIssuerName: lagoon-issuer
+  defaultIssuerKind: ClusterIssuer
+  defaultIssuerGroup: cert-manager.io
