@@ -20,6 +20,8 @@ sshTokenEndpoint: https://ssh-token.lagoon.jwrf.au
 elasticsearchURL: http://opendistro-es-client-service.opendistro-es.svc.cluster.local:9200
 kibanaURL: http://opendistro-es-kibana-svc.opendistro-es.svc.cluster.local:443
 
+rabbitMQPassword: password
+
 api:
   replicaCount: 1
   image:

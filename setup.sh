@@ -27,6 +27,7 @@ helm repo add twuni https://helm.twun.io
 helm repo add k8up https://k8up-io.github.io/k8up
 helm repo add appuio https://charts.appuio.ch
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
 helm repo update
 
 # Install MetalLB
@@ -101,6 +102,41 @@ JWTSECRET=$(kubectl get secret -n lagoon-core lagoon-core-secrets -o json | jq -
 TOKEN=$(jwt encode --alg HS256 --no-iat --payload role=admin --iss "$JWTUSER" --aud "$JWTAUDIENCE" --sub "$JWTUSER" --secret "$JWTSECRET")
 echo "TOKEN: ${TOKEN}"
 
+
+echo "Add user ssh-key so we can login to LagoonCLI later"
+NAME="Starter key"
+PUBLIC_KEY=$(cat /home/jwrf/.ssh/id_ed25519.pub)
+USER_EMAIL="jwrf@example.com"
+
+read -r -d '' QUERY << EOM
+mutation AddKey(\$name: String!, \$publicKey: String!, \$userEmail: String!) {
+  addUserSSHPublicKey(input: {
+    name: \$name
+    publicKey: \$publicKey
+    user: {
+      email: \$userEmail
+    }
+  }) {
+    id
+    name
+  }
+}
+EOM
+
+read -r -d '' VARIABLES << EOM
+{
+  "name": "$NAME",
+  "publicKey": "$PUBLIC_KEY",
+  "userEmail": "$USER_EMAIL"
+}
+EOM
+
+# POST request to Lagoon GraphQL API
+curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "$(jq -n --arg query "$QUERY" --argjson variables "$VARIABLES" '{query: $query, variables: $variables}')"
+
 echo "Checking LagoonCLI is installed."
 if ! command -v lagoon >/dev/null 2>&1; then
 	echo "LagoonCLI not found, installing now..."
@@ -112,20 +148,21 @@ else
 fi
 
 echo "Adding cluster to lagoon"
+# Requires https://github.com/uselagoon/lagoon-cli/pull/459
 lagoon config add \
+	--force \
 	--graphql https://api.lagoon.jwrf.au/graphql \
 	--ui https://dashboard.lagoon.jwrf.au \
 	--hostname 192.168.1.242 \
 	--lagoon cozone \
-	--port 2020
+	--port 2020 \
+	--ssh-key "/home/jwrf/.ssh/id_ed25519"
 lagoon config default --lagoon cozone
-
-echo "Setting up LagoonCLI"
-lagoon add user-sshkey --email jwrf@example.com --pubkey /home/jwrf/.ssh/id_ed25519.pub
 lagoon login
 
 echo "Configuring deploy targets"
 lagoon add deploytarget \
+	--force \
 	--name cozone \
 	--token $TOKEN \
 	--console-url https://172.17.0.1:16643 \
