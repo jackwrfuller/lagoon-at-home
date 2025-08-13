@@ -2,12 +2,12 @@ lagoonSeedUsername: jwrf@example.com
 lagoonSeedPassword: password
 lagoonSeedOrganization: cozone
 
-s3BAASAccessKeyID: lagoonFilesAccessKey
-s3BAASSecretAccessKey: lagoonFilesSecretKey
-s3FilesAccessKeyID: lagoonFilesAccessKey
-s3FilesSecretAccessKey: lagoonFilesSecretKey
+s3BAASAccessKeyID: admin
+s3BAASSecretAccessKey: password
+s3FilesAccessKeyID: admin
+s3FilesSecretAccessKey: password
 s3FilesBucket: lagoon-files
-s3FilesHost: http://minio-api.lagoon.jwrf.au
+s3FilesHost: https://minio-api.lagoon.jwrf.au
 
 harborURL: https://harbor.lagoon.jwrf.au
 harborAdminPassword: password

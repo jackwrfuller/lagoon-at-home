@@ -60,6 +60,30 @@ helm upgrade --install --create-namespace --namespace registry --wait --version=
 echo "Installing Minio"
 helm upgrade --install --create-namespace --namespace minio --wait minio bitnami/minio -f values/minio.yml
 
+echo "Installing Postgresql"
+helm upgrade \
+	--install \
+	--create-namespace \
+	--namespace postgresql \
+	--wait \
+	--timeout $(TIMEOUT) \
+	--set image.tag="14.15.0-debian-12-r1" \
+	--set auth.postgresPassword="password"
+	--version=16.2.3 \
+	postgresql \
+	bitnami/postgresql
+
+echo "Installing MariaDB"
+helm upgrade \
+	--install \
+	--create-namespace \
+	--namespace mariadb \
+	--wait \
+	--set auth.rootPassword="password" \
+	--version=12.2.9 \
+	mariadb \
+	bitnami/mariadb
+
 echo "Installing Lagoon Core"
 kubectl create namespace lagoon-core
 kubectl -n lagoon-core apply -f config/nats-cert.yml
@@ -102,6 +126,38 @@ JWTSECRET=$(kubectl get secret -n lagoon-core lagoon-core-secrets -o json | jq -
 TOKEN=$(jwt encode --alg HS256 --no-iat --payload role=admin --iss "$JWTUSER" --aud "$JWTAUDIENCE" --sub "$JWTUSER" --secret "$JWTSECRET")
 echo "TOKEN: ${TOKEN}"
 
+echo "Create user since api seeding isn't working currently"
+QUERY='mutation (
+  $email: String!,
+  $firstName: String,
+  $lastName: String,
+  $comment: String,
+) {
+  addUser(input: {
+    email: $email,
+    firstName: $firstName,
+    lastName: $lastName,
+    comment: $comment,
+  }) {
+    id
+    email
+    firstName
+    lastName
+  }
+}'
+
+VARIABLES='{
+  "email": "jwrf@example.com",
+  "firstName": "Jack",
+  "lastName": "Fuller",
+  "comment": "Created via API",
+}'
+
+curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "$(jq -n --arg query "$QUERY" --argjson variables "$VARIABLES" \
+    '{query: $query, variables: $variables}')"
 
 echo "Add user ssh-key so we can login to LagoonCLI later"
 NAME="Starter key"
@@ -153,7 +209,7 @@ lagoon config add \
 	--force \
 	--graphql https://api.lagoon.jwrf.au/graphql \
 	--ui https://dashboard.lagoon.jwrf.au \
-	--hostname 192.168.1.242 \
+	--hostname 192.168.1.241 \
 	--lagoon cozone \
 	--port 2020 \
 	--ssh-key "/home/jwrf/.ssh/id_ed25519"
@@ -161,6 +217,7 @@ lagoon config default --lagoon cozone
 lagoon login
 
 echo "Configuring deploy targets"
+lagoon add organization -O cozone
 lagoon add deploytarget \
 	--force \
 	--name cozone \

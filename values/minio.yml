@@ -1,12 +1,11 @@
 auth:
-  rootUser: lagoonFilesAccesKey
-  rootPassword: lagoonFilesSecretKey
+  rootUser: admin
+  rootPassword: "password"
 defaultBuckets: 'lagoon-files,restores' 
 ingress:
   enabled: true
-  hostname: minio.lagoon.jwrf.au
-  servicePort: http
-apiIngress:
-  enabled: true
   hostname: minio-api.lagoon.jwrf.au
-  servicePort: http
+console:
+  ingress:
+    enabled: true
+    hostname: minio.lagoon.jwrf.au
