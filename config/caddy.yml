@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: abs-service
+spec:
+  ports:
+    - port: 13378
+      targetPort: 13378
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: abs-service
+subsets:
+  - addresses:
+      - ip: 192.168.1.102
+    ports:
+      - port: 13378
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex-service
+spec:
+  ports:
+    - port: 32400
+      targetPort: 32400
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: plex-service
+subsets:
+  - addresses:
+      - ip: 192.168.1.102
+    ports:
+      - port: 32400
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-service
+spec:
+  ports:
+    - port: 8096
+      targetPort: 8096
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: jellyfin-service
+subsets:
+  - addresses:
+      - ip: 192.168.1.107
+    ports:
+      - port: 8096
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: media-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - abs.jwrf.au
+      secretName: abs-tls
+    - hosts:
+        - plex.jwrf.au
+      secretName: plex-tls
+    - hosts:
+        - jellyfin.jwrf.au
+      secretName: jellyfin-tls
+  rules:
+  - host: abs.jwrf.au
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: abs-service
+            port:
+              number: 13378
+  - host: plex.jwrf.au
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: plex-service
+            port:
+              number: 32400
+  - host: jellyfin.jwrf.au
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jellyfin-service
+            port:
+              number: 8096

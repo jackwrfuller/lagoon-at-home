@@ -37,7 +37,7 @@ kubectl apply -f config/metallb.yml
 
 echo "Installing Cert Manager"
 helm upgrade --install --create-namespace -n cert-manager --wait cert-manager jetstack/cert-manager -f values/cert-manager.yml
-kubectl apply -f config/lagoon-issuer.yml
+kubectl apply -f config/lagoon-issuer-letsencrypt.yml
 
 #helm show crds prometheus-community/kube-prometheus-stack | kubectl apply -f -
 #

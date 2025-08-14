@@ -40,6 +40,7 @@ api:
           - api.lagoon.jwrf.au
         secretName: api-tls
     annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: "true"
       nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
@@ -99,8 +100,10 @@ keycloak:
           - keycloak.lagoon.jwrf.au
         secretName: keycloak-tls
     annotations:
-      kubernetes.io/tls-acme: "true"
-      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true" 
+        #kubernetes.io/tls-acme: "true"
+        #nginx.ingress.kubernetes.io/ssl-redirect: "false"
   serviceMonitor:
     enabled: false
 
@@ -178,8 +181,10 @@ ui:
           - dashboard.lagoon.jwrf.au
         secretName: ui-tls
     annotations:
-      kubernetes.io/tls-acme: "true"
-      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        #kubernetes.io/tls-acme: "true"
+        #nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
 backupHandler:
   replicaCount: 1
