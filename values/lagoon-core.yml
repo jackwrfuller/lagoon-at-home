@@ -124,7 +124,8 @@ broker:
     requests:
       cpu: "10m"
   tls:
-    enabled: true
+    enabled: false
+    secretName: broker-tls
   ingress:
     enabled: true
     hosts:
@@ -136,6 +137,7 @@ broker:
           - broker.lagoon.jwrf.au
         secretName: broker-tls
     annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: "true"
       nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
@@ -334,22 +336,10 @@ controllerhandler:
 imageTag: ""
 
 
-# enable nats cluster (and optionally natsbox debugger)
 nats:
   enabled: true
-  config:
-    cluster:
-      name: lagoon-core-ci-example
-    leafnodes:
-      tls:
-        merge:
-          # don't require mTLS in tests
-          verify: false
-  # natsBox:
-  #   enabled: true
-  #   # additional labels are required due to the network policy
-  #   additionalLabels:
-  #     lagoon-core-nats-client: "true"
+  tlsCA:
+    enabled: false
 
 natsService:
   type: ClusterIP
@@ -359,3 +349,10 @@ natsConfig:
     lagoonRemote:
       - user: ci-ssh-portal
         password: ci-password
+  tls:
+    # Don't create TLS secret in the chart - cert-manager will handle it
+    enabled: true
+  # Disable the built-in CA since cert-manager is handling certificates
+  tlsCA:
+    enabled: false
+

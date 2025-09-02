@@ -2,6 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: lagoon-core-nats
+  namespace: lagoon-core
 spec:
   secretName: lagoon-core-nats-tls
   isCA: false

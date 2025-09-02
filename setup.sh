@@ -38,6 +38,7 @@ kubectl apply -f config/metallb.yml
 echo "Installing Cert Manager"
 helm upgrade --install --create-namespace -n cert-manager --wait cert-manager jetstack/cert-manager -f values/cert-manager.yml
 kubectl apply -f config/lagoon-issuer-letsencrypt.yml
+kubectl apply -f config/lagoon-issuer-selfsigned.yml
 
 #helm show crds prometheus-community/kube-prometheus-stack | kubectl apply -f -
 #
@@ -48,6 +49,9 @@ kubectl apply -f config/lagoon-issuer-letsencrypt.yml
 # Install Ingress-Nginx
 echo "Installing Ingress-nginx"
 helm upgrade --install --create-namespace --namespace ingress-nginx --wait ingress-nginx ingress-nginx/ingress-nginx -f values/ingress-nginx.yml
+
+# Homelab services
+kubectl apply -f config/caddy.yml
 
 echo "Install Kube Prometheus Stack"
 helm upgrade --install --create-namespace --namespace kube-prometheus --wait kube-prometheus prometheus-community/kube-prometheus-stack -f values/prometheus.yml
@@ -66,9 +70,8 @@ helm upgrade \
 	--create-namespace \
 	--namespace postgresql \
 	--wait \
-	--timeout $(TIMEOUT) \
 	--set image.tag="14.15.0-debian-12-r1" \
-	--set auth.postgresPassword="password"
+	--set auth.postgresPassword="password" \
 	--version=16.2.3 \
 	postgresql \
 	bitnami/postgresql
@@ -88,7 +91,14 @@ echo "Installing Lagoon Core"
 kubectl create namespace lagoon-core
 kubectl -n lagoon-core apply -f config/nats-cert.yml
 kubectl -n lagoon-core apply -f config/broker-tls.yml
-helm upgrade --install --create-namespace --namespace lagoon-core -f values/lagoon-core.yml lagoon-core lagoon/lagoon-core
+helm upgrade \
+	--install \
+	--create-namespace \
+	--wait \
+	--namespace lagoon-core \
+	-f values/lagoon-core.yml \
+	lagoon-core \
+	lagoon/lagoon-core
 
 
 echo "Installing Lagoon Remote"
@@ -96,7 +106,14 @@ kubectl create namespace lagoon
 kubectl -n lagoon apply -f config/remote-nats-cert.yml
 kubectl -n lagoon apply -f config/remote-cert.yml
 kubectl apply -f config/bulk-storage.yml
-helm upgrade --install --create-namespace --namespace lagoon -f values/lagoon-remote.yml lagoon-remote lagoon/lagoon-remote
+helm upgrade \
+	--install \
+	--wait \
+	--create-namespace \
+	--namespace lagoon \
+	-f values/lagoon-remote.yml \
+	lagoon-remote \
+	lagoon/lagoon-remote
 
 
 echo "Checking JWT is installed."
