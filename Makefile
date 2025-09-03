@@ -164,7 +164,7 @@ post-install:
 		--force \
 		--graphql https://api.lagoon.jwrf.au/graphql \
 		--ui https://dashboard.lagoon.jwrf.au \
-		--hostname 192.168.1.242 \
+		--hostname $$(kubectl get svc -n lagoon-core lagoon-core-ssh -o jsonpath='{.status.loadBalancer.ingress[0].ip}')  \
 		--lagoon cozone \
 		--port 2020 \
 		--ssh-key "/home/jwrf/.ssh/id_ed25519"
@@ -175,7 +175,7 @@ post-install:
 	  echo "Organization cozone already exists"; \
 	else \
 	  echo "Adding organization cozone"; \
-	  lagoon add organization -O cozone; \
+	  lagoon add organization --force -O cozone; \
 	fi
 	# Check if deploytarget "cozone" exists
 	if lagoon list deploytargets --output-json | jq -e '.data // [] | .[] | select(.name=="cozone")' >/dev/null; then
@@ -184,6 +184,7 @@ post-install:
 	  echo "Creating deploytarget 'cozone'"
 	  lagoon add deploytarget \
 	    --name cozone \
+	    --force \
 	    --token "$$TOKEN" \
 	    --console-url https://172.17.0.1:16643 \
 	    --router-pattern='$${environment}-$${project}.app.lagoon.jwrf.au'
