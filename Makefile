@@ -11,7 +11,7 @@ KUBECONFIG := $(HOME)/.kube/config
 # --- High-level targets ---
 all: dependencies lagoon-core lagoon-remote lagoon-config
 
-dependencies: k3s sysctl helm-repos metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools
+dependencies: k3s sysctl helm-repos metallb cert-manager ingress homelab prometheus harbor minio postgres 
 
 # --- Core system setup ---
 k3s:
@@ -88,7 +88,7 @@ mariadb:
 	@echo "Installing MariaDB"
 	helm upgrade --install --create-namespace --namespace mariadb --wait \
 		--set auth.rootPassword="password" \
-		--version=12.2.9 \
+		--version=13.1.3 \
 		mariadb bitnami/mariadb
 
 # --- Lagoon components ---
@@ -97,7 +97,7 @@ lagoon-core:
 	kubectl create namespace lagoon-core --dry-run=client -o yaml | kubectl apply -f -
 	kubectl -n lagoon-core apply -f config/nats-cert.yml
 	kubectl -n lagoon-core apply -f config/broker-tls.yml
-	helm upgrade --install --create-namespace --wait --namespace lagoon-core \
+	helm upgrade --install --create-namespace --namespace lagoon-core \
 		-f values/lagoon-core.yml lagoon-core lagoon/lagoon-core
 
 lagoon-remote:
@@ -159,6 +159,37 @@ post-install:
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $$TOKEN" \
 		-d "$$(jq -n --arg query "$$QUERY" --argjson variables "$$VARIABLES" '{query: $$query, variables: $$variables}')";
+	@echo "Adding SSH Key to user"
+	SSH_KEY_NAME="jwrf"
+	SSH_KEY_VALUE=$$(cat /home/jwrf/.ssh/id_ed25519.pub)
+	USER_EMAIL="jwrf@example.com"
+	JSON=$$(printf '{"query":"mutation { addUserSSHPublicKey(input: {name: \\"%s\\", publicKey: \\"%s\\", user: {email: \\"%s\\"}}) { id } }"}' "$$SSH_KEY_NAME" "$$SSH_KEY_VALUE" "$$USER_EMAIL")
+	curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+	  -H 'Content-Type: application/json' \
+	  -H "Authorization: Bearer $$TOKEN" \
+	  -d "$$JSON"
+	KEYCLOAK_URL="https://keycloak.lagoon.jwrf.au"
+	KEYCLOAK_TOKEN=$$(curl -s -X POST "$${KEYCLOAK_URL}/auth/realms/master/protocol/openid-connect/token" \
+	  -d "grant_type=client_credentials" \
+	  -d "client_id=admin-api" \
+	  -d "client_secret=$$(kubectl -n lagoon-core get secret lagoon-core-keycloak -o jsonpath="{.data.KEYCLOAK_ADMIN_API_CLIENT_SECRET}" | base64 --decode)" | jq -r '.access_token')
+	INITIAL_USER_EMAIL=jwrf@example.com
+	INITIAL_USER_PASSWORD="abcqq"
+	@echo "Looking up user ID for email: $$INITIAL_USER_EMAIL"
+	USER_JSON=$$(curl -s -H "Authorization: Bearer $$KEYCLOAK_TOKEN" \
+		-H "Content-Type: application/json" \
+		"$${KEYCLOAK_URL}/auth/admin/realms/lagoon/users?email=$${INITIAL_USER_EMAIL}"); \
+	USER_ID=$$(echo $$USER_JSON | jq -r '.[0].id'); \
+	if [ -z "$$USER_ID" ]; then \
+		echo "User not found"; \
+		exit 1; \
+	fi; \
+	echo "Resetting password for user ID $$USER_ID"; \
+	curl -s -X PUT \
+		-H "Authorization: Bearer $$KEYCLOAK_TOKEN" \
+		-H "Content-Type: application/json" \
+		-d '{"type": "password", "value": "'"$$INITIAL_USER_PASSWORD"'", "temporary": false}' \
+		"$${KEYCLOAK_URL}/auth/admin/realms/lagoon/users/$$USER_ID/reset-password"
 	@echo "Adding cluster to Lagoon"
 	lagoon config add \
 		--force \
