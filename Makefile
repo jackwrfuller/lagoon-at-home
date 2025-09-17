@@ -51,7 +51,7 @@ helm-repos: helm
 metallb:
 	@echo "Installing MetalLB"
 	helm upgrade \
-		--install \ 
+		--install \
 		--create-namespace \
 		--namespace metallb-system \
 		--wait \
