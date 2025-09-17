@@ -22,6 +22,7 @@ k3s:
 	curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable=traefik --disable=servicelb" sh -
 	sudo mkdir -p $(dir $(KUBECONFIG))
 	sudo cp /etc/rancher/k3s/k3s.yaml $(KUBECONFIG)
+	sudo chmod 644 $(KUBECONFIG)
 
 sysctl:
 	@echo "Configuring sysctl limits"
