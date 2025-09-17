@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 KUBECONFIG := $(HOME)/.kube/config
 
-BASE_URL="192.168.1.102.nip.io"
+BASE_URL="192.168.1.150.nip.io"
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 CLUSTER_ISSUER=selfsigned-issuer
 
