@@ -212,6 +212,9 @@ lagoon-core:
 		--create-namespace \
 		--namespace lagoon-core \
 		-f values/lagoon-core-new.yml \
+		--set lagoonAPIURL="https://api.$(BASE_URL)/graphql" \
+        --set keycloakFrontEndURL="https://keycloak.$(BASE_URL)" \
+        --set lagoonUIURL="https://dashboard.$(BASE_URL)" \
 		--set harborURL="https://harbor.$(BASE_URL)" \
 		--set harborAdminPassword=password \
 		--set s3BAASAccessKeyID=admin \
