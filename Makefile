@@ -236,6 +236,7 @@ lagoon-core:
 		--set ui.replicaCount=1 \
 		--set webhookHandler.replicaCount=1 \
 		--set webhook2tasks.replicaCount=1 \
+		--set api.resources.request={} \
 		lagoon-core \
 		lagoon/lagoon-core
 		
