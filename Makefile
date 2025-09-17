@@ -7,7 +7,7 @@ SHELL := /bin/bash
 KUBECONFIG := $(HOME)/.kube/config
 
 BASE_URL=lagoonat.homes
-LAGOON_NETWORK_RANGE=192.168.1.150-192.168.1.160
+LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 
 .PHONY: all dependencies k3s sysctl helm-repos metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
