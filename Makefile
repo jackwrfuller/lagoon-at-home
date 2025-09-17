@@ -220,6 +220,7 @@ lagoon-core:
         --set s3FilesSecretAccessKey=password \
         --set s3FilesBucket=lagoon-files \
         --set s3FilesHost="https://minioapi.$(BASE_URL)" \
+		--set elasticsearchURL="not-real-but-necessary.example.com" \
 		lagoon-core \
 		lagoon/lagoon-core
 		
