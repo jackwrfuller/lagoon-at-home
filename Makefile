@@ -86,8 +86,6 @@ ingress:
 		--create-namespace \
 		--namespace ingress-nginx \
 		--wait \
-		ingress-nginx \
-		ingress-nginx/ingress-nginx \
 		--set controller.allowSnippetAnnotations=true \
 		--set controller.enableAnnotationValidations=false \
 		--set controller.service.type=LoadBalancer \
@@ -98,7 +96,9 @@ ingress:
 		--set controller.config.hsts=false \
 		--set controller.watchIngressWithoutClass=true \
 		--set controller.ingressClassResource.default=true \
-		--set controller.addHeaders.X-Lagoon="remote>ingress-nginx>$$namespace:$$service_name"
+		--set controller.addHeaders.X-Lagoon="remote>ingress-nginx>$$namespace:$$service_name" \
+		ingress-nginx \
+		ingress-nginx/ingress-nginx
 
 homelab:
 	@echo "Applying homelab services"
