@@ -225,9 +225,14 @@ lagoon-core:
 		--set keycloak.serviceMonitor.enabled=false \
 		--set broker.serviceMonitor.enabled=false \
 		--set drushAlias.enabled=false \
+		--set backupHandler.enabled=false \
 		--set api.replicaCount=1 \
 		--set ssh.replicaCount=1 \
 		--set logs2notifications.replicaCount=1 \
+		--set actionsHandler.replicaCount=1 \
+		--set ui.replicaCount=1 \
+		--set webhookHandler.replicaCount=1 \
+		--set webhook2tasks.replicaCount=1 \
 		lagoon-core \
 		lagoon/lagoon-core
 		
