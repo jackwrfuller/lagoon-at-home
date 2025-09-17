@@ -217,7 +217,6 @@ lagoon-core:
 	    --install \
 	    --create-namespace \
 	    --namespace lagoon-core \
-	    -f values/lagoon-core-new.yml \
 	    --set lagoonSeedUsername="$(SEED_USERNAME)" \
             --set lagoonSeedPassword=$(SEED_PASSWORD) \
             --set lagoonSeedOrganization=$(SEED_ORG) \
@@ -239,10 +238,10 @@ lagoon-core:
 	    --set drushAlias.enabled=false \
 	    --set backupHandler.enabled=false \
 	    --set api.ingress.enabled=true \
-            --set api.ingress.hosts[0].host="api.$(BASE_URL) \
+            --set api.ingress.hosts[0].host="api.$(BASE_URL)" \
             --set api.ingress.hosts[0].paths[0]="/" \
             --set ui.ingress.enabled=true \
-            --set ui.ingress.hosts[0].host="dashboard.$(BASE_URL) \
+            --set ui.ingress.hosts[0].host="dashboard.$(BASE_URL)" \
             --set ui.ingress.hosts[0].paths[0]="/" \
 	    --set ui.ingress.tls[0].hosts[0]="dashboard.$(BASE_URL)" \
 	    --set ui.ingress.tls[0].secretName=ui-tls \
@@ -254,11 +253,11 @@ lagoon-core:
             --set keycloak.ingress.tls[0].secretName=keycloak-tls \
 	    --set-string keycloak.ingress.annotations.cert-manager\\.io/cluster-issuer=$(CLUSTER_ISSUER) \
 	    --set webhookHandler.ingress.enabled=true \
-            --set webhookHandler.ingress.hosts[0].host="webhooks.$(BASE_URL) \
+            --set webhookHandler.ingress.hosts[0].host="webhooks.$(BASE_URL)" \
             --set webhookHandler.ingress.hosts[0].paths[0]="/" \
             --set-string webhookHandler.ingress.annotations.kubernetes\\.io/tls-acme=true \
             --set broker.ingress.enabled=true \
-            --set broker.ingress.hosts[0].host="broker.$(BASE_URL) \
+            --set broker.ingress.hosts[0].host="broker.$(BASE_URL)" \
             --set broker.ingress.hosts[0].paths[0]="/" \
 	    --set api.replicaCount=1 \
 	    --set authServer.replicaCount=1 \
@@ -270,7 +269,7 @@ lagoon-core:
 	    --set webhooks2tasks.replicaCount=1 \
 	    --set api.resources.requests.cpu=0m \
 	    --set apiDB.resources.requests.cpu=0m \
-	    --set keycloak.resources.requests.cpu=0m \
+	    --set keycloak.resources.requests.cpu=250m \
 	    --set keycloak.resources.requests.memory=0Mi \
 	    --set broker.resources.requests.cpu=0m \
 	    --set broker.resources.requests.memory=0Mi \
@@ -292,6 +291,25 @@ lagoon-remote:
 		--create-namespace \
 		--namespace lagoon \
 		-f values/lagoon-remote.yml \
+		--set global.rabbitMQUsername=lagoon \
+                --set "global.rabbitMQPassword=$$($(KUBECTL) -n lagoon-core get secret lagoon-core-broker -o json | $(JQ) -r '.data.RABBITMQ_PASSWORD | @base64d')" \
+		--set dockerHost.registry="harbor-harbor-registry.harbor.svc:5000" \
+		--set lagoon-build-deploy.enabled=true \
+                --set lagoon-build-deploy.lagoonTargetName=cozone \
+                --set lagoon-build-deploy.lagoonFeatureFlagForceRWX2RWO=enabled \
+                --set lagoon-build-deploy.rabbitMQUsername=lagoon \
+                --set lagoon-build-deploy.rabbitMQPassword=password \
+                --set lagoon-build-deploy.rabbitMQHostname=lagoon-core-broker.lagoon-core.svc:5672 \
+                --set lagoon-build-deploy.lagoonTargetName=cozone \
+                --set lagoon-build-deploy.sshPortalHost=lagoon-remote-ssh-portal.lagoon.svc \
+                --set lagoon-build-deploy.sshPortalPort=22 \
+                --set lagoon-build-deploy.lagoonTokenHost=lagoon-core-token.lagoon-core.svc \
+                --set lagoon-build-deploy.lagoonTokenPort=2223 \
+                --set lagoon-build-deploy.lagoonAPIHost=http://lagoon-core-api.lagoon-core.svc:80 \
+                --set lagoon-build-deploy.harbor.enabled=true \
+                --set lagoon-build-deploy.harbor.adminPassword=password \
+                --set lagoon-build-deploy.harbor.adminUser=admin \
+                --set lagoon-build-deploy.harbor.host="http://harbor.$(BASE_URL)" \
 		lagoon-remote \
 		lagoon/lagoon-remote
 
