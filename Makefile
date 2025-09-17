@@ -131,7 +131,7 @@ minio:
 		--set console.ingress.ingressClassName=nginx \
 		--set console.ingress.tls=true \
 		--set console.ingress.hostname="minio.lagoon.$(BASE_URL)" \
-		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging
+		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
 		minio \
 		bitnami/minio
 
