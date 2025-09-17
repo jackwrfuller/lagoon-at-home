@@ -350,6 +350,7 @@ post-install:
 	fi
 
 # --- Cleanup ---
-clean:
-	@echo "Not implemented: cleanup of resources"
+nuke:
+	@echo "Nuking EVERYTHING"
+	bash /usr/local/bin/k3s-uninstall.sh
 
