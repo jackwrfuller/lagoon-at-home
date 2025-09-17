@@ -8,6 +8,7 @@ KUBECONFIG := $(HOME)/.kube/config
 
 BASE_URL="192.168.1.102.nip.io"
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
+CLUSTER_ISSUER=selfsigned-issuer
 
 .PHONY: all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
@@ -68,13 +69,14 @@ metallb:
 
 cert-manager:
 	@echo "Installing Cert Manager"
+	export CLUSTER_ISSUER=$(CLUSTER_ISSUER)
 	helm upgrade \
 		--install \
 		--create-namespace \
 		--namespace cert-manager \
 		--wait \
 		--set installCRDs=true \
-		--set ingressShim.defaultIssuerName=selfsigned-issuer \
+		--set ingressShim.defaultIssuerName=$(CLUSTER_ISSUER) \
 		--set ingressShim.defaultIssuerKind=ClusterIssuer \
 		--set ingressShim.defaultIssuerGroup=cert-manager.io \
 		cert-manager \
@@ -122,6 +124,7 @@ prometheus:
 harbor:
 	@echo "Installing Harbor registry"
 	export BASE_URL=$(BASE_URL)
+	export CLUSTER_ISSUER=$(CLUSTER_ISSUER)
 	helm upgrade \
 		--install \
 		--create-namespace \
@@ -129,7 +132,7 @@ harbor:
 		--wait \
 		--version=1.16.2 \
 		--set expose.ingress.className=nginx \
-        --set-string expose.ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+        --set-string expose.ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
         --set-string expose.ingress.annotations."kubernetes\.io/tls-acme"="true" \
         --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-buffering"="off" \
         --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-request-buffering"="off" \
@@ -152,6 +155,7 @@ harbor:
 minio:
 	@echo "Installing Minio"
 	export BASE_URL=$(BASE_URL)
+	export CLUSTER_ISSUER=$(CLUSTER_ISSUER)
 	helm upgrade \
 		--install \
 		--create-namespace \
@@ -163,12 +167,12 @@ minio:
 		--set ingress.ingressClassName=nginx \
 		--set ingress.tls=true \
 		--set ingress.hostname="minioapi.$(BASE_URL)" \
-		--set-string ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+		--set-string ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
 		--set console.ingress.enabled=true \
 		--set console.ingress.ingressClassName=nginx \
 		--set console.ingress.tls=true \
 		--set console.ingress.hostname="minio.$(BASE_URL)" \
-		--set-string console.ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+		--set-string console.ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
 		minio \
 		bitnami/minio
 
