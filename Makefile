@@ -9,7 +9,7 @@ KUBECONFIG := $(HOME)/.kube/config
 BASE_URL=lagoonat.homes
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 
-.PHONY: all dependencies k3s sysctl helm-repos metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
+.PHONY: all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
 # --- High-level targets ---
 all: dependencies lagoon-core lagoon-remote lagoon-config
@@ -96,7 +96,7 @@ ingress:
 		--set controller.config.hsts=false \
 		--set controller.watchIngressWithoutClass=true \
 		--set controller.ingressClassResource.default=true \
-		--set controller.addHeaders.X-Lagoon="remote>ingress-nginx>$$namespace:$$service_name" \
+		--set controller.addHeaders.X-Lagoon="remote>ingress-nginx>\$$namespace:\$$service_name" \
 		ingress-nginx \
 		ingress-nginx/ingress-nginx
 
