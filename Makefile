@@ -214,6 +214,12 @@ lagoon-core:
 		-f values/lagoon-core-new.yml \
 		--set harborURL="https://harbor.$(BASE_URL)" \
 		--set harborAdminPassword=password \
+		--set s3BAASAccessKeyID=admin \
+        --set s3BAASSecretAccessKey=password \
+        --set s3FilesAccessKeyID=admin \
+        --set s3FilesSecretAccessKey=password \
+        --set s3FilesBucket=lagoon-files \
+        --set s3FilesHost="https://minioapi.$(BASE_URL)" \
 		lagoon-core \
 		lagoon/lagoon-core
 		
