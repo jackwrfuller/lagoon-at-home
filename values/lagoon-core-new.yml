@@ -8,10 +8,10 @@
 #s3FilesSecretAccessKey: password
 #s3FilesBucket: lagoon-files
 #s3FilesHost: https://minioapi.lagoon.jwrf.au
-#
+
 #harborURL: https://harbor.lagoon.jwrf.au
 #harborAdminPassword: password
-#
+
 #lagoonAPIURL: https://api.lagoon.jwrf.au/graphql
 #keycloakFrontEndURL: https://keycloak.lagoon.jwrf.au
 #lagoonUIURL: https://dashboard.lagoon.jwrf.au
