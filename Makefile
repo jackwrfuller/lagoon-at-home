@@ -290,7 +290,6 @@ lagoon-remote:
 		--wait \
 		--create-namespace \
 		--namespace lagoon \
-		-f values/lagoon-remote.yml \
 		--set global.rabbitMQUsername=lagoon \
                 --set "global.rabbitMQPassword=$$($(KUBECTL) -n lagoon-core get secret lagoon-core-broker -o json | $(JQ) -r '.data.RABBITMQ_PASSWORD | @base64d')" \
 		--set dockerHost.registry="harbor-harbor-registry.harbor.svc:5000" \
@@ -358,14 +357,14 @@ post-install:
 	echo "Creating user"; \
 	QUERY='mutation ($$email: String!, $$firstName: String, $$lastName: String, $$comment: String) { addUser(input: { email: $$email, firstName: $$firstName, lastName: $$lastName, comment: $$comment }) { id email firstName lastName } }'; \
 	VARIABLES='{"email": "jwrf@example.com", "firstName": "Jack", "lastName": "Fuller", "comment": "Created via API"}'; \
-	curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+	curl -s -X POST https://api.$(BASE_URL)/graphql \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $$TOKEN" \
 		-d "$$(jq -n --arg query "$$QUERY" --argjson variables "$$VARIABLES" '{query: $$query, variables: $$variables}')";
 	echo "Assigning user as platform owner"; \
 		QUERY='mutation ($$user: UserInput!, $$role: PlatformRole!) { addPlatformRoleToUser(user: $$user, role: $$role) { id email platformRoles } }'; \
 		VARIABLES='{ "user": { "email": "jwrf@example.com" }, "role": "OWNER" }'; \
-	curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+	curl -s -X POST https://api.$(BASE_URL)/graphql \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $$TOKEN" \
 		-d "$$(jq -n --arg query "$$QUERY" --argjson variables "$$VARIABLES" '{query: $$query, variables: $$variables}')";
@@ -374,11 +373,11 @@ post-install:
 	SSH_KEY_VALUE=$$(cat /home/jwrf/.ssh/id_ed25519.pub)
 	USER_EMAIL="jwrf@example.com"
 	JSON=$$(printf '{"query":"mutation { addUserSSHPublicKey(input: {name: \\"%s\\", publicKey: \\"%s\\", user: {email: \\"%s\\"}}) { id } }"}' "$$SSH_KEY_NAME" "$$SSH_KEY_VALUE" "$$USER_EMAIL")
-	curl -s -X POST https://api.lagoon.jwrf.au/graphql \
+	curl -s -X POST https://api.$(BASE_URL)/graphql \
 	  -H 'Content-Type: application/json' \
 	  -H "Authorization: Bearer $$TOKEN" \
 	  -d "$$JSON"
-	KEYCLOAK_URL="https://keycloak.lagoon.jwrf.au"
+	KEYCLOAK_URL="https://keycloak.$(BASE_URL)"
 	KEYCLOAK_TOKEN=$$(curl -s -X POST "$${KEYCLOAK_URL}/auth/realms/master/protocol/openid-connect/token" \
 	  -d "grant_type=client_credentials" \
 	  -d "client_id=admin-api" \
@@ -403,8 +402,8 @@ post-install:
 	@echo "Adding cluster to Lagoon"
 	lagoon config add \
 		--force \
-		--graphql https://api.lagoon.jwrf.au/graphql \
-		--ui https://dashboard.lagoon.jwrf.au \
+		--graphql https://api.$(BASE_URL)/graphql \
+		--ui https://dashboard.$(BASE_URL) \
 		--hostname $$(kubectl get svc -n lagoon-core lagoon-core-ssh -o jsonpath='{.status.loadBalancer.ingress[0].ip}')  \
 		--lagoon cozone \
 		--port 2020 \
@@ -428,7 +427,7 @@ post-install:
 	    --force \
 	    --token "$$TOKEN" \
 	    --console-url https://172.17.0.1:16643 \
-	    --router-pattern='$${environment}-$${project}.app.lagoon.jwrf.au'
+	    --router-pattern='$${environment}-$${project}.app.$(BASE_URL)'
 	fi
 	# Grab its ID
 	DEPLOYTARGET_ID=$$(lagoon list deploytargets --output-json | jq -r '.data[] | select(.name=="cozone") | .id')
