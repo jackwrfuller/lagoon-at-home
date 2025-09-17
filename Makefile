@@ -207,7 +207,7 @@ lagoon-core:
 		--install \
 		--create-namespace \
 		--namespace lagoon-core \
-		-f values/lagoon-core.yml \
+		-f values/lagoon-core-new.yml \
 		lagoon-core \
 		lagoon/lagoon-core
 
