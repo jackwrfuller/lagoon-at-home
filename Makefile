@@ -222,6 +222,7 @@ lagoon-core:
         --set s3FilesHost="https://minioapi.$(BASE_URL)" \
 		--set elasticsearchURL="not-real-but-necessary.example.com" \
 		--set kibanaURL="not-real-but-necessary.example.com" \
+		--set keycloak.serviceMonitor.enabled=false \
 		lagoon-core \
 		lagoon/lagoon-core
 		
