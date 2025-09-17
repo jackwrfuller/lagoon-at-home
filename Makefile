@@ -223,6 +223,7 @@ lagoon-core:
 		--set elasticsearchURL="not-real-but-necessary.example.com" \
 		--set kibanaURL="not-real-but-necessary.example.com" \
 		--set keycloak.serviceMonitor.enabled=false \
+		--set broker.serviceMonitor.enabled=false \
 		lagoon-core \
 		lagoon/lagoon-core
 		
