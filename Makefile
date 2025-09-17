@@ -110,7 +110,33 @@ prometheus:
 
 harbor:
 	@echo "Installing Harbor registry"
-	helm upgrade --install --create-namespace --namespace registry --wait --version=1.16.2 registry harbor/harbor -f values/harbor.yml
+	export BASE_URL=$(BASE_URL)
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace harbor \
+		--wait \
+		--version=1.16.2 \
+		--set expose.ingress.className=nginx \
+        --set-string expose.ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+        --set-string expose.ingress.annotations."kubernetes\.io/tls-acme"="true" \
+        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-buffering"="off" \
+        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-request-buffering"="off" \
+        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="false" \
+        --set expose.ingress.hosts.core="harbor.$(BASE_URL)" \
+        --set expose.tls.enabled=true \
+        --set expose.tls.certSource=secret \
+        --set expose.tls.secret.secretName=harbor-ingress \
+        --set externalURL="https://harbor.$(BASE_URL)" \
+        --set harborAdminPassword=password \
+        --set chartmuseum.enabled=false \
+        --set clair.enabled=false \
+        --set notary.enabled=false \
+        --set trivy.enabled=false \
+        --set jobservice.jobLogger=stdout \
+        --set registry.relativeurls=true \
+		harbor \
+		harbor/harbor \
 
 minio:
 	@echo "Installing Minio"
@@ -125,12 +151,12 @@ minio:
 		--set ingress.enabled=true \
 		--set ingress.ingressClassName=nginx \
 		--set ingress.tls=true \
-		--set ingress.hostname="minioapi.lagoon.$(BASE_URL)" \
+		--set ingress.hostname="minioapi.$(BASE_URL)" \
 		--set-string ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
 		--set console.ingress.enabled=true \
 		--set console.ingress.ingressClassName=nginx \
 		--set console.ingress.tls=true \
-		--set console.ingress.hostname="minio.lagoon.$(BASE_URL)" \
+		--set console.ingress.hostname="minio.$(BASE_URL)" \
 		--set-string console.ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
 		minio \
 		bitnami/minio
