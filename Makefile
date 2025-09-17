@@ -58,6 +58,7 @@ metallb:
 		--wait \
 		metallb \
 		metallb/metallb 
+	export LAGOON_NETWORK_RANGE=$(LAGOON_NETWORK_RANGE)
 	envsubst < config/metallb.yml.tpl > build/metallb.yml
 	kubectl apply -f build/metallb.yml
 
