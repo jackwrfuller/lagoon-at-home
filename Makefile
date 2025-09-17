@@ -65,7 +65,7 @@ metallb:
 cert-manager:
 	@echo "Installing Cert Manager"
 	helm upgrade \
-		--install \ 
+		--install \
 		--create-namespace \
 		--namespace cert-manager \
 		--wait \
