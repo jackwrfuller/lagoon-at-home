@@ -106,7 +106,14 @@ homelab:
 
 prometheus:
 	@echo "Installing Prometheus Stack"
-	helm upgrade --install --create-namespace --namespace kube-prometheus --wait kube-prometheus prometheus-community/kube-prometheus-stack -f values/prometheus.yml
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace kube-prometheus \
+		--wait \
+		kube-prometheus \
+		prometheus-community/kube-prometheus-stack \
+		-f values/prometheus.yml
 
 harbor:
 	@echo "Installing Harbor registry"
@@ -163,18 +170,28 @@ minio:
 
 postgres:
 	@echo "Installing PostgreSQL"
-	helm upgrade --install --create-namespace --namespace postgresql --wait \
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace postgresql \
+		--wait \
 		--set image.tag="14.15.0-debian-12-r1" \
 		--set auth.postgresPassword="password" \
 		--version=16.2.3 \
-		postgresql bitnami/postgresql
+		postgresql \
+		bitnami/postgresql
 
 mariadb:
 	@echo "Installing MariaDB"
-	helm upgrade --install --create-namespace --namespace mariadb --wait \
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace mariadb \
+		--wait \
 		--set auth.rootPassword="password" \
 		--version=13.1.3 \
-		mariadb bitnami/mariadb
+		mariadb \
+		bitnami/mariadb
 
 # --- Lagoon components ---
 lagoon-core:
@@ -182,8 +199,13 @@ lagoon-core:
 	kubectl create namespace lagoon-core --dry-run=client -o yaml | kubectl apply -f -
 	kubectl -n lagoon-core apply -f config/nats-cert.yml
 	kubectl -n lagoon-core apply -f config/broker-tls.yml
-	helm upgrade --install --create-namespace --namespace lagoon-core \
-		-f values/lagoon-core.yml lagoon-core lagoon/lagoon-core
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace lagoon-core \
+		-f values/lagoon-core.yml \
+		lagoon-core \
+		lagoon/lagoon-core
 
 lagoon-remote:
 	@echo "Installing Lagoon Remote"
@@ -191,8 +213,14 @@ lagoon-remote:
 	kubectl -n lagoon apply -f config/remote-nats-cert.yml
 	kubectl -n lagoon apply -f config/remote-cert.yml
 	kubectl apply -f config/bulk-storage.yml
-	helm upgrade --install --wait --create-namespace --namespace lagoon \
-		-f values/lagoon-remote.yml lagoon-remote lagoon/lagoon-remote
+	helm upgrade \
+		--install \
+		--wait \
+		--create-namespace \
+		--namespace lagoon \
+		-f values/lagoon-remote.yml \
+		lagoon-remote \
+		lagoon/lagoon-remote
 
 # --- Tools ---
 lagoon-config: jwt jq lagoon-cli post-install
