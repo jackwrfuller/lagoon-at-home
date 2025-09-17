@@ -6,7 +6,7 @@ SHELL := /bin/bash
 
 KUBECONFIG := $(HOME)/.kube/config
 
-BASE_URL=lagoonat.homes
+BASE_URL="192.168.1.102.nip.io"
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 
 .PHONY: all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
@@ -74,7 +74,7 @@ cert-manager:
 		--namespace cert-manager \
 		--wait \
 		--set installCRDs=true \
-		--set ingressShim.defaultIssuerName=letsencrypt-staging \
+		--set ingressShim.defaultIssuerName=selfsigned-issuer \
 		--set ingressShim.defaultIssuerKind=ClusterIssuer \
 		--set ingressShim.defaultIssuerGroup=cert-manager.io \
 		cert-manager \
