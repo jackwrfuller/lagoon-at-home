@@ -28,7 +28,7 @@ sysctl:
 	sudo sysctl fs.inotify.max_user_instances=8192
 	sudo sysctl fs.inotify.max_user_watches=524288
 
-helm-repos:
+helm-repos: helm
 	@echo "Adding helm repos"
 	helm repo add harbor https://helm.goharbor.io
 	helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -132,6 +132,12 @@ lagoon-remote:
 
 # --- Tools ---
 lagoon-config: jwt jq lagoon-cli post-install
+
+helm:
+	@if ! command -v helm >/dev/null; then \
+		echo "Installing Helm"
+		curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 |
+	else echo "Helm already installed"; fi
 
 jwt:
 	@if ! command -v jwt >/dev/null; then \
