@@ -121,8 +121,7 @@ minio:
 		--namespace minio \
 		--wait \
 		--set auth.rootUser=admin,auth.rootPassword=password \
-		--set defaultBuckets[0]=lagoon-files \
-        --set defaultBuckets[1]=restores \
+		--set defaultBuckets=lagoon-files \
 		--set ingress.enabled=true \
 		--set ingress.ingressClassName=nginx \
 		--set ingress.tls=true \
