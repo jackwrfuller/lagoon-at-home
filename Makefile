@@ -208,8 +208,8 @@ lagoon-core:
 		--create-namespace \
 		--namespace lagoon-core \
 		-f values/lagoon-core-new.yml \
-		--set harborURL="https://harbor.$(BASE_URL)"
-		--set harborPassword=password
+		--set harborURL="https://harbor.$(BASE_URL)" \
+		--set harborPassword=password \
 		lagoon-core \
 		lagoon/lagoon-core
 		
