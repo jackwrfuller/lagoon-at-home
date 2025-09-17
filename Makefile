@@ -81,7 +81,24 @@ cert-manager:
 
 ingress:
 	@echo "Installing Ingress Nginx"
-	helm upgrade --install --create-namespace --namespace ingress-nginx --wait ingress-nginx ingress-nginx/ingress-nginx -f values/ingress-nginx.yml
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace ingress-nginx \ 
+		--wait \
+		ingress-nginx \
+		ingress-nginx/ingress-nginx \
+		--set controller.allowSnippetAnnotations=true \
+		--set controller.enableAnnotationValidations=false \
+		--set controller.service.type=LoadBalancer \
+		--set controller.service.nodePorts.http=32080 \
+		--set controller.service.nodePorts.https=32443 \
+		--set controller.config.annotations-risk-level=Critical \
+		--set controller.config.proxy-body-size=0 \
+		--set controller.config.hsts=false \
+		--set controller.watchIngressWithoutClass=true \
+		--set controller.ingressClassResource.default=true \
+		--set controller.addHeaders.X-Lagoon="remote>ingress-nginx>$$namespace:$$service_name"
 
 homelab:
 	@echo "Applying homelab services"
