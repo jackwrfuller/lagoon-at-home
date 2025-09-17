@@ -114,7 +114,26 @@ harbor:
 
 minio:
 	@echo "Installing Minio"
-	helm upgrade --install --create-namespace --namespace minio --wait minio bitnami/minio -f values/minio.yml
+	export BASE_URL=$(BASE_URL)
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace minio \
+		--wait \
+		--set auth.rootUser=admin,auth.rootPassword=password \
+		--set defaultBuckets="lagoon-files,restores"\
+		--set ingress.enabled=true \
+		--set ingress.ingressClassName=nginx \
+		--set ingress.tls=true \
+		--set ingress.hostname="minioapi.lagoon.$(BASE_URL)" \
+		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+		--set console.ingress.enabled=true \
+		--set console.ingress.ingressClassName=nginx \
+		--set console.ingress.tls=true \
+		--set console.ingress.hostname="minio.lagoon.$(BASE_URL)" \
+		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging
+		minio \
+		bitnami/minio
 
 postgres:
 	@echo "Installing PostgreSQL"
