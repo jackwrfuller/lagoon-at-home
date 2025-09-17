@@ -126,12 +126,12 @@ minio:
 		--set ingress.ingressClassName=nginx \
 		--set ingress.tls=true \
 		--set ingress.hostname="minioapi.lagoon.$(BASE_URL)" \
-		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+		--set-string ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
 		--set console.ingress.enabled=true \
 		--set console.ingress.ingressClassName=nginx \
 		--set console.ingress.tls=true \
 		--set console.ingress.hostname="minio.lagoon.$(BASE_URL)" \
-		--set-string controller.service.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
+		--set-string console.ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-staging \
 		minio \
 		bitnami/minio
 
