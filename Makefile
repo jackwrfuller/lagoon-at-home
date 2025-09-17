@@ -209,7 +209,7 @@ lagoon-core:
 		--namespace lagoon-core \
 		-f values/lagoon-core-new.yml \
 		--set harborURL="https://harbor.$(BASE_URL)" \
-		--set harborPassword=password \
+		--set harborAdminPassword=password \
 		lagoon-core \
 		lagoon/lagoon-core
 		
