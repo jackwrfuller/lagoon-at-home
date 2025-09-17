@@ -84,7 +84,7 @@ ingress:
 	helm upgrade \
 		--install \
 		--create-namespace \
-		--namespace ingress-nginx \ 
+		--namespace ingress-nginx \
 		--wait \
 		ingress-nginx \
 		ingress-nginx/ingress-nginx \
