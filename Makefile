@@ -224,6 +224,7 @@ lagoon-core:
 		--set kibanaURL="not-real-but-necessary.example.com" \
 		--set keycloak.serviceMonitor.enabled=false \
 		--set broker.serviceMonitor.enabled=false \
+		--set api.replicaCount=1 \
 		lagoon-core \
 		lagoon/lagoon-core
 		
