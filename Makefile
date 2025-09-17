@@ -135,8 +135,8 @@ lagoon-config: jwt jq lagoon-cli post-install
 
 helm:
 	@if ! command -v helm >/dev/null; then \
-		echo "Installing Helm"
-		curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 |
+		echo "Installing Helm"; \
+		curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash; \
 	else echo "Helm already installed"; fi
 
 jwt:
