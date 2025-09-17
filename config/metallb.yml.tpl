@@ -5,7 +5,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 192.168.1.240-192.168.1.250
+  - ${LAGOON_NETWORK_RANGE}
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

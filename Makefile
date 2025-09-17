@@ -6,6 +6,9 @@ SHELL := /bin/bash
 
 KUBECONFIG := $(HOME)/.kube/config
 
+BASE_URL=lagoonat.homes
+LAGOON_NETWORK_RANGE=192.168.1.150-192.168.1.160
+
 .PHONY: all dependencies k3s sysctl helm-repos metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
 # --- High-level targets ---
@@ -47,13 +50,31 @@ helm-repos:
 
 metallb:
 	@echo "Installing MetalLB"
-	helm upgrade --install --create-namespace --namespace metallb-system --wait metallb metallb/metallb
-	kubectl apply -f config/metallb.yml
+	helm upgrade \
+		--install \ 
+		--create-namespace \
+		--namespace metallb-system \
+		--wait \
+		metallb \
+		metallb/metallb 
+	envsubst < config/metallb.yml.tpl > build/metallb.yml
+	kubectl apply -f build/metallb.yml
 
 cert-manager:
 	@echo "Installing Cert Manager"
-	helm upgrade --install --create-namespace -n cert-manager --wait cert-manager jetstack/cert-manager -f values/cert-manager.yml
+	helm upgrade \
+		--install \ 
+		--create-namespace \
+		--namespace cert-manager \
+		--wait \
+		--set installCRDs=true \
+		--set ingressShim.defaultIssuerName=letsencrypt-staging \
+		--set ingressShim.defaultIssuerKind=ClusterIssuer \
+		--set ingressShim.defaultIssuerGroup=cert-manager.io \
+		cert-manager \
+		jetstack/cert-manager
 	kubectl apply -f config/lagoon-issuer-letsencrypt.yml
+	kubectl apply -f config/lagoon-issuer-letsencrypt-staging.yml
 	kubectl apply -f config/lagoon-issuer-selfsigned.yml
 
 ingress:
