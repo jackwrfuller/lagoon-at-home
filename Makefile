@@ -5,15 +5,22 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := all
 
 KUBECONFIG := $(HOME)/.kube/config
+KUBECTL := kubectl
 
 BASE_URL="192.168.1.150.nip.io"
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 CLUSTER_ISSUER=selfsigned-issuer
 
-.PHONY: all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
+MINIO_USERNAME=admin
+MINIO_PASSWORD=password
+SEED_USERNAME=jwrf@example.com
+SEED_PASSWORD=password
+SEED_ORG=cozone
+
+.PHONY: basic all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
 # --- High-level targets ---
-basic: core-dependencies lagoon-core lagoon-remote lagoon-config
+basic: core-dependencies lagoon-core
 
 all: core-dependencies extras lagoon-core lagoon-remote lagoon-config
 
@@ -39,7 +46,6 @@ helm-repos: helm
 	helm repo add harbor https://helm.goharbor.io
 	helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 	helm repo add stable https://charts.helm.sh/stable
-	helm repo add bitnami https://charts.bitnami.com/bitnami
 	helm repo add amazeeio https://amazeeio.github.io/charts/
 	helm repo add lagoon https://uselagoon.github.io/lagoon-charts/
 	helm repo add minio https://charts.min.io/
@@ -161,20 +167,20 @@ minio:
 		--create-namespace \
 		--namespace minio \
 		--wait \
-		--set auth.rootUser=admin,auth.rootPassword=password \
-		--set defaultBuckets=lagoon-files \
+		--set auth.rootUser=$(MINIO_USERNAME),auth.rootPassword=$(MINIO_PASSWORD) \
+		--set consoleIngress.enabled=true \
+		--set consoleIngress.hosts[0].host="minio.$(BASE_URL)" \
+		--set consoleIngress.hosts[0].paths[0].path="/" \
+		--set consoleIngress.hosts[0].paths[0].pathType=Prefix \
 		--set ingress.enabled=true \
-		--set ingress.ingressClassName=nginx \
-		--set ingress.tls=true \
-		--set ingress.hostname="minioapi.$(BASE_URL)" \
+		--set ingress.hosts[0].host=minio-api.$(BASE_URL) \
+		--set ingress.hosts[0].paths[0].path="/" \
+		--set ingress.hosts[0].paths[0].pathType=Prefix \
 		--set-string ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
-		--set console.ingress.enabled=true \
-		--set console.ingress.ingressClassName=nginx \
-		--set console.ingress.tls=true \
-		--set console.ingress.hostname="minio.$(BASE_URL)" \
-		--set-string console.ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
+		--set-string consoleIngress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
 		minio \
-		bitnami/minio
+		oci://registry-1.docker.io/cloudpirates/minio
+	$(KUBECTL) -n minio exec -it $$($(KUBECTL) -n minio  get pod -l app.kubernetes.io/name=minio -o jsonpath="{.items[0].metadata.name}") -- sh -c 'mc alias set local http://localhost:9000 $(MINIO_USERNAME) $(MINIO_PASSWORD) && mc mb local/lagoon-files && mc mb local/restores' || true
 
 postgres:
 	@echo "Installing PostgreSQL"
@@ -208,37 +214,70 @@ lagoon-core:
 	kubectl -n lagoon-core apply -f config/nats-cert.yml
 	kubectl -n lagoon-core apply -f config/broker-tls.yml
 	helm upgrade \
-		--install \
-		--create-namespace \
-		--namespace lagoon-core \
-		-f values/lagoon-core-new.yml \
-		--set lagoonAPIURL="https://api.$(BASE_URL)/graphql" \
-        --set keycloakFrontEndURL="https://keycloak.$(BASE_URL)" \
-        --set lagoonUIURL="https://dashboard.$(BASE_URL)" \
-		--set harborURL="https://harbor.$(BASE_URL)" \
-		--set harborAdminPassword=password \
-		--set s3BAASAccessKeyID=admin \
-        --set s3BAASSecretAccessKey=password \
-        --set s3FilesAccessKeyID=admin \
-        --set s3FilesSecretAccessKey=password \
-        --set s3FilesBucket=lagoon-files \
-        --set s3FilesHost="https://minioapi.$(BASE_URL)" \
-		--set elasticsearchURL="not-real-but-necessary.example.com" \
-		--set kibanaURL="not-real-but-necessary.example.com" \
-		--set keycloak.serviceMonitor.enabled=false \
-		--set broker.serviceMonitor.enabled=false \
-		--set drushAlias.enabled=false \
-		--set backupHandler.enabled=false \
-		--set api.replicaCount=1 \
-		--set ssh.replicaCount=1 \
-		--set logs2notifications.replicaCount=1 \
-		--set actionsHandler.replicaCount=1 \
-		--set ui.replicaCount=1 \
-		--set webhookHandler.replicaCount=1 \
-		--set webhook2tasks.replicaCount=1 \
-		--set api.resources.request={} \
-		lagoon-core \
-		lagoon/lagoon-core
+	    --install \
+	    --create-namespace \
+	    --namespace lagoon-core \
+	    -f values/lagoon-core-new.yml \
+	    --set lagoonSeedUsername="$(SEED_USERNAME)" \
+            --set lagoonSeedPassword=$(SEED_PASSWORD) \
+            --set lagoonSeedOrganization=$(SEED_ORG) \
+	    --set lagoonAPIURL="https://api.$(BASE_URL)/graphql" \
+            --set keycloakFrontEndURL="https://keycloak.$(BASE_URL)" \
+            --set lagoonUIURL="https://dashboard.$(BASE_URL)" \
+	    --set harborURL="https://harbor.$(BASE_URL)" \
+	    --set harborAdminPassword=password \
+	    --set s3BAASAccessKeyID=admin \
+            --set s3BAASSecretAccessKey=password \
+            --set s3FilesAccessKeyID=admin \
+            --set s3FilesSecretAccessKey=password \
+            --set s3FilesBucket=lagoon-files \
+            --set s3FilesHost="https://minioapi.$(BASE_URL)" \
+	    --set elasticsearchURL="not-real-but-necessary.example.com" \
+	    --set kibanaURL="not-real-but-necessary.example.com" \
+	    --set keycloak.serviceMonitor.enabled=false \
+	    --set broker.serviceMonitor.enabled=false \
+	    --set drushAlias.enabled=false \
+	    --set backupHandler.enabled=false \
+	    --set api.ingress.enabled=true \
+            --set api.ingress.hosts[0].host="api.$(BASE_URL) \
+            --set api.ingress.hosts[0].paths[0]="/" \
+            --set ui.ingress.enabled=true \
+            --set ui.ingress.hosts[0].host="dashboard.$(BASE_URL) \
+            --set ui.ingress.hosts[0].paths[0]="/" \
+	    --set ui.ingress.tls[0].hosts[0]="dashboard.$(BASE_URL)" \
+	    --set ui.ingress.tls[0].secretName=ui-tls \
+	    --set-string ui.ingress.annotations.cert-manager\\.io/cluster-issuer=$(CLUSTER_ISSUER) \
+            --set keycloak.ingress.enabled=true \
+            --set keycloak.ingress.hosts[0].host="keycloak.$(BASE_URL)" \
+            --set keycloak.ingress.hosts[0].paths[0]="/" \
+            --set keycloak.ingress.tls[0].hosts[0]="keycloak.$(BASE_URL)" \
+            --set keycloak.ingress.tls[0].secretName=keycloak-tls \
+	    --set-string keycloak.ingress.annotations.cert-manager\\.io/cluster-issuer=$(CLUSTER_ISSUER) \
+	    --set webhookHandler.ingress.enabled=true \
+            --set webhookHandler.ingress.hosts[0].host="webhooks.$(BASE_URL) \
+            --set webhookHandler.ingress.hosts[0].paths[0]="/" \
+            --set-string webhookHandler.ingress.annotations.kubernetes\\.io/tls-acme=true \
+            --set broker.ingress.enabled=true \
+            --set broker.ingress.hosts[0].host="broker.$(BASE_URL) \
+            --set broker.ingress.hosts[0].paths[0]="/" \
+	    --set api.replicaCount=1 \
+	    --set authServer.replicaCount=1 \
+	    --set ssh.replicaCount=1 \
+	    --set logs2notifications.replicaCount=1 \
+	    --set actionsHandler.replicaCount=1 \
+	    --set ui.replicaCount=1 \
+	    --set webhookHandler.replicaCount=1 \
+	    --set webhooks2tasks.replicaCount=1 \
+	    --set api.resources.requests.cpu=0m \
+	    --set apiDB.resources.requests.cpu=0m \
+	    --set keycloak.resources.requests.cpu=0m \
+	    --set keycloak.resources.requests.memory=0Mi \
+	    --set broker.resources.requests.cpu=0m \
+	    --set broker.resources.requests.memory=0Mi \
+	    --set keycloak.resources.requests.memory=0Mi \
+	    --set ssh.resources.requests.cpu=0m \
+	    lagoon-core \
+	    lagoon/lagoon-core
 		
 
 lagoon-remote:
