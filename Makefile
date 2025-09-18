@@ -7,7 +7,7 @@ SHELL := /bin/bash
 KUBECONFIG := $(HOME)/.kube/config
 KUBECTL := kubectl
 
-BASE_URL="192.168.1.150.nip.io"
+BASE_URL=192.168.1.150.nip.io
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
 CLUSTER_ISSUER=selfsigned-issuer
 
@@ -259,6 +259,12 @@ lagoon-core:
             --set broker.ingress.enabled=true \
             --set broker.ingress.hosts[0].host="broker.$(BASE_URL)" \
             --set broker.ingress.hosts[0].paths[0]="/" \
+	    --set ssh.service.type=LoadBalancer \
+	    --set ssh.service.port=2020 \
+	    --set sshToken.enabled=true \
+	    --set sshToken.serviceMonitor.enabled=false \
+	    --set sshToken.service.type=LoadBalancer \
+	    --set sshToken.service.ports.sshserver=2223 \
 	    --set api.replicaCount=1 \
 	    --set authServer.replicaCount=1 \
 	    --set ssh.replicaCount=1 \
@@ -325,7 +331,7 @@ jwt:
 	@if ! command -v jwt >/dev/null; then \
 		echo "Installing jwt-cli"; \
 		TMPDIR=$$(mktemp -d); \
-		curl -sSL https://github.com/mike-engel/jwt-cli/releases/download/6.2.0/jwt-linux.tar.gz | tar -xzC $$TMPDIR; \
+		curl -sSL https://github.com/mike-engel/jwt-cli/releases/download/6.2.0/jwt-linux-musl.tar.gz | tar -xzC $$TMPDIR; \
 		sudo mv $$TMPDIR/jwt /usr/local/bin/jwt; \
 		rm -rf $$TMPDIR; \
 		chmod a+x /usr/local/bin/jwt; \
@@ -340,7 +346,7 @@ jq:
 lagoon-cli:
 	@if ! command -v lagoon >/dev/null; then \
 		echo "Installing Lagoon CLI"; \
-		sudo curl -L "https://github.com/uselagoon/lagoon-cli/releases/download/v0.32.0/lagoon-cli-v0.32.0-linux-amd64" \
+		sudo curl -L "https://github.com/uselagoon/lagoon-cli/releases/download/v0.32.1/lagoon-cli-v0.32.1-linux-amd64" \
 			-o /usr/local/bin/lagoon; \
 		sudo chmod +x /usr/local/bin/lagoon; \
 	else echo "Lagoon CLI already installed"; fi
@@ -357,14 +363,14 @@ post-install:
 	echo "Creating user"; \
 	QUERY='mutation ($$email: String!, $$firstName: String, $$lastName: String, $$comment: String) { addUser(input: { email: $$email, firstName: $$firstName, lastName: $$lastName, comment: $$comment }) { id email firstName lastName } }'; \
 	VARIABLES='{"email": "jwrf@example.com", "firstName": "Jack", "lastName": "Fuller", "comment": "Created via API"}'; \
-	curl -s -X POST https://api.$(BASE_URL)/graphql \
+	curl -s -X POST http://api.$(BASE_URL)/graphql \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $$TOKEN" \
 		-d "$$(jq -n --arg query "$$QUERY" --argjson variables "$$VARIABLES" '{query: $$query, variables: $$variables}')";
 	echo "Assigning user as platform owner"; \
 		QUERY='mutation ($$user: UserInput!, $$role: PlatformRole!) { addPlatformRoleToUser(user: $$user, role: $$role) { id email platformRoles } }'; \
 		VARIABLES='{ "user": { "email": "jwrf@example.com" }, "role": "OWNER" }'; \
-	curl -s -X POST https://api.$(BASE_URL)/graphql \
+	curl -s -X POST http://api.$(BASE_URL)/graphql \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $$TOKEN" \
 		-d "$$(jq -n --arg query "$$QUERY" --argjson variables "$$VARIABLES" '{query: $$query, variables: $$variables}')";
@@ -373,28 +379,35 @@ post-install:
 	SSH_KEY_VALUE=$$(cat /home/jwrf/.ssh/id_ed25519.pub)
 	USER_EMAIL="jwrf@example.com"
 	JSON=$$(printf '{"query":"mutation { addUserSSHPublicKey(input: {name: \\"%s\\", publicKey: \\"%s\\", user: {email: \\"%s\\"}}) { id } }"}' "$$SSH_KEY_NAME" "$$SSH_KEY_VALUE" "$$USER_EMAIL")
-	curl -s -X POST https://api.$(BASE_URL)/graphql \
+	curl -s -X POST http://api.$(BASE_URL)/graphql \
 	  -H 'Content-Type: application/json' \
 	  -H "Authorization: Bearer $$TOKEN" \
 	  -d "$$JSON"
-	KEYCLOAK_URL="https://keycloak.$(BASE_URL)"
-	KEYCLOAK_TOKEN=$$(curl -s -X POST "$${KEYCLOAK_URL}/auth/realms/master/protocol/openid-connect/token" \
+	@echo "Getting Keycloak token"
+	KEYCLOAK_URL=https://keycloak.$(BASE_URL)
+	KEYCLOAK_SECRET=$$(kubectl -n lagoon-core get secret lagoon-core-keycloak -o jsonpath='{.data.KEYCLOAK_ADMIN_API_CLIENT_SECRET}' | base64 --decode)
+	echo "Using secret: $$KEYCLOAK_SECRET"
+	echo "To URL: $${KEYCLOAK_URL}/auth/realms/master/protocol/openid-connect/token"
+	KEYCLOAK_RESPONSE=$$(curl -s -k -X POST "$${KEYCLOAK_URL}/auth/realms/master/protocol/openid-connect/token" \
 	  -d "grant_type=client_credentials" \
 	  -d "client_id=admin-api" \
-	  -d "client_secret=$$(kubectl -n lagoon-core get secret lagoon-core-keycloak -o jsonpath="{.data.KEYCLOAK_ADMIN_API_CLIENT_SECRET}" | base64 --decode)" | jq -r '.access_token')
+	  -d "client_secret=$$KEYCLOAK_SECRET")
+	echo "Raw Keycloak response: $$KEYCLOAK_RESPONSE"
+	KEYCLOAK_TOKEN=$$(echo "$$KEYCLOAK_RESPONSE" | jq -r '.access_token')
+	echo "Obtained token: $$KEYCLOAK_TOKEN"
 	INITIAL_USER_EMAIL=jwrf@example.com
 	INITIAL_USER_PASSWORD="abcqq"
 	@echo "Looking up user ID for email: $$INITIAL_USER_EMAIL"
-	USER_JSON=$$(curl -s -H "Authorization: Bearer $$KEYCLOAK_TOKEN" \
+	export USER_JSON=$$(curl -s -k -H "Authorization: Bearer $$KEYCLOAK_TOKEN" \
 		-H "Content-Type: application/json" \
 		"$${KEYCLOAK_URL}/auth/admin/realms/lagoon/users?email=$${INITIAL_USER_EMAIL}"); \
-	USER_ID=$$(echo $$USER_JSON | jq -r '.[0].id'); \
+	export USER_ID=$$(echo $$USER_JSON | jq -r '.[0].id'); \
 	if [ -z "$$USER_ID" ]; then \
 		echo "User not found"; \
 		exit 1; \
 	fi; \
 	echo "Resetting password for user ID $$USER_ID"; \
-	curl -s -X PUT \
+	curl -s -k -X PUT \
 		-H "Authorization: Bearer $$KEYCLOAK_TOKEN" \
 		-H "Content-Type: application/json" \
 		-d '{"type": "password", "value": "'"$$INITIAL_USER_PASSWORD"'", "temporary": false}' \
@@ -402,8 +415,8 @@ post-install:
 	@echo "Adding cluster to Lagoon"
 	lagoon config add \
 		--force \
-		--graphql https://api.$(BASE_URL)/graphql \
-		--ui https://dashboard.$(BASE_URL) \
+		--graphql http://api.$(BASE_URL)/graphql \
+		--ui http://dashboard.$(BASE_URL) \
 		--hostname $$(kubectl get svc -n lagoon-core lagoon-core-ssh -o jsonpath='{.status.loadBalancer.ingress[0].ip}')  \
 		--lagoon cozone \
 		--port 2020 \
