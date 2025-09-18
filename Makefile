@@ -4,8 +4,8 @@ SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 .DEFAULT_GOAL := all
 
-KUBECONFIG := $(HOME)/.kube/config
-KUBECTL := kubectl
+KUBECONFIG=$(HOME)/.kube/config
+KUBECTL=kubectl
 
 BASE_URL=192.168.1.150.nip.io
 LAGOON_NETWORK_RANGE="192.168.1.150-192.168.1.160"
@@ -35,6 +35,8 @@ k3s:
 	sudo mkdir -p $(dir $(KUBECONFIG))
 	sudo cp /etc/rancher/k3s/k3s.yaml $(KUBECONFIG)
 	sudo chmod 644 $(KUBECONFIG)
+	sudo envsubst < config/k3s.yml.tpl > /etc/rancher/k3s/registries.yaml
+	sudo systemctl restart k3s
 
 sysctl:
 	@echo "Configuring sysctl limits"
@@ -138,25 +140,38 @@ harbor:
 		--wait \
 		--version=1.16.2 \
 		--set expose.ingress.className=nginx \
-        --set-string expose.ingress.annotations."cert-manager\.io/cluster-issuer"=$(CLUSTER_ISSUER) \
-        --set-string expose.ingress.annotations."kubernetes\.io/tls-acme"="true" \
-        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-buffering"="off" \
-        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-request-buffering"="off" \
-        --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="false" \
-        --set expose.ingress.hosts.core="harbor.$(BASE_URL)" \
-        --set expose.tls.enabled=true \
-        --set expose.tls.certSource=secret \
-        --set expose.tls.secret.secretName=harbor-ingress \
-        --set externalURL="https://harbor.$(BASE_URL)" \
-        --set harborAdminPassword=password \
-        --set chartmuseum.enabled=false \
-        --set clair.enabled=false \
-        --set notary.enabled=false \
-        --set trivy.enabled=false \
-        --set jobservice.jobLogger=stdout \
-        --set registry.relativeurls=true \
+                --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-buffering"="off" \
+                --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-request-buffering"="off" \
+                --set-string expose.ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="false" \
+                --set expose.ingress.hosts.core="harbor.$(BASE_URL)" \
+                --set expose.tls.enabled=false \
+                --set externalURL="http://harbor.$(BASE_URL)" \
+                --set harborAdminPassword=password \
+                --set chartmuseum.enabled=false \
+                --set clair.enabled=false \
+                --set notary.enabled=false \
+                --set trivy.enabled=false \
+                --set jobservice.jobLogger=stdout \
+                --set registry.relativeurls=true \
 		harbor \
 		harbor/harbor \
+
+registry:
+	@echo "Installing unauthenticated registry"
+	export BASE_URL=$(BASE_URL)
+	export CLUSTER_ISSUER=$(CLUSTER_ISSUER)
+	helm upgrade \
+		--install \
+		--create-namespace \
+		--namespace registry \
+		--wait \
+		--set ingress.enabled=true \
+		--set "ingress.hosts[0]=registry.$$($(KUBECTL) -n ingress-nginx get services ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}').nip.io" \
+		--set ingress.path="/" \
+		--set persistence.enabled=true \
+		--version=2.2.3 \
+		registry \
+		twuni/docker-registry
 
 minio:
 	@echo "Installing Minio"
@@ -220,17 +235,17 @@ lagoon-core:
 	    --set lagoonSeedUsername="$(SEED_USERNAME)" \
             --set lagoonSeedPassword=$(SEED_PASSWORD) \
             --set lagoonSeedOrganization=$(SEED_ORG) \
-	    --set lagoonAPIURL="https://api.$(BASE_URL)/graphql" \
-            --set keycloakFrontEndURL="https://keycloak.$(BASE_URL)" \
-            --set lagoonUIURL="https://dashboard.$(BASE_URL)" \
-	    --set harborURL="https://harbor.$(BASE_URL)" \
+	    --set lagoonAPIURL="http://api.$(BASE_URL)/graphql" \
+            --set keycloakFrontEndURL="http://keycloak.$(BASE_URL)" \
+            --set lagoonUIURL="http://dashboard.$(BASE_URL)" \
+	    --set harborURL="http://harbor.$(BASE_URL)" \
 	    --set harborAdminPassword=password \
 	    --set s3BAASAccessKeyID=admin \
             --set s3BAASSecretAccessKey=password \
             --set s3FilesAccessKeyID=admin \
             --set s3FilesSecretAccessKey=password \
             --set s3FilesBucket=lagoon-files \
-            --set s3FilesHost="https://minioapi.$(BASE_URL)" \
+            --set s3FilesHost="http://minioapi.$(BASE_URL)" \
 	    --set elasticsearchURL="not-real-but-necessary.example.com" \
 	    --set kibanaURL="not-real-but-necessary.example.com" \
 	    --set keycloak.serviceMonitor.enabled=false \
@@ -296,14 +311,14 @@ lagoon-remote:
 		--wait \
 		--create-namespace \
 		--namespace lagoon \
+		--set dockerHost.registry="registry.$(BASE_URL)" \
 		--set global.rabbitMQUsername=lagoon \
-                --set "global.rabbitMQPassword=$$($(KUBECTL) -n lagoon-core get secret lagoon-core-broker -o json | $(JQ) -r '.data.RABBITMQ_PASSWORD | @base64d')" \
-		--set dockerHost.registry="harbor-harbor-registry.harbor.svc:5000" \
+                --set "global.rabbitMQPassword=$$($(KUBECTL) -n lagoon-core get secret lagoon-core-broker -o json | jq -r '.data.RABBITMQ_PASSWORD | @base64d')" \
 		--set lagoon-build-deploy.enabled=true \
                 --set lagoon-build-deploy.lagoonTargetName=cozone \
                 --set lagoon-build-deploy.lagoonFeatureFlagForceRWX2RWO=enabled \
                 --set lagoon-build-deploy.rabbitMQUsername=lagoon \
-                --set lagoon-build-deploy.rabbitMQPassword=password \
+		--set lagoon-build-deploy.rabbitMQPassword=$$($(KUBECTL) -n lagoon-core get secret lagoon-core-broker -o json | jq -r '.data.RABBITMQ_PASSWORD | @base64d') \
                 --set lagoon-build-deploy.rabbitMQHostname=lagoon-core-broker.lagoon-core.svc:5672 \
                 --set lagoon-build-deploy.lagoonTargetName=cozone \
                 --set lagoon-build-deploy.sshPortalHost=lagoon-remote-ssh-portal.lagoon.svc \
@@ -311,10 +326,9 @@ lagoon-remote:
                 --set lagoon-build-deploy.lagoonTokenHost=lagoon-core-token.lagoon-core.svc \
                 --set lagoon-build-deploy.lagoonTokenPort=2223 \
                 --set lagoon-build-deploy.lagoonAPIHost=http://lagoon-core-api.lagoon-core.svc:80 \
-                --set lagoon-build-deploy.harbor.enabled=true \
-                --set lagoon-build-deploy.harbor.adminPassword=password \
-                --set lagoon-build-deploy.harbor.adminUser=admin \
-                --set lagoon-build-deploy.harbor.host="http://harbor.$(BASE_URL)" \
+		--set lagoon-build-deploy.extraArgs[0]="--skip-tls-verify=true" \
+                --set lagoon-build-deploy.harbor.enabled=false \
+		--set lagoon-build-deploy.unauthenticatedRegistry=registry.$$($(KUBECTL) -n ingress-nginx get services ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}').nip.io \
 		lagoon-remote \
 		lagoon/lagoon-remote
 
