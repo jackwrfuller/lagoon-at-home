@@ -20,22 +20,24 @@ SEED_ORG=cozone
 .PHONY: basic all dependencies k3s sysctl helm-repos helm metallb cert-manager ingress homelab prometheus harbor minio postgres mariadb tools lagoon-core lagoon-remote
 
 # --- High-level targets ---
-basic: core-dependencies lagoon-core
+basic: core-dependencies lagoon-core lagoon-remote lagoon-config
 
 all: core-dependencies extras lagoon-core lagoon-remote lagoon-config
 
-core-dependencies: k3s sysctl helm-repos metallb cert-manager ingress harbor minio
+core-dependencies: k3s sysctl helm-repos metallb cert-manager ingress registry minio
 
 extras: homelab prometheus postgres 
 
 # --- Core system setup ---
 k3s:
 	@echo "Installing k3s"
+	export BASE_URL=$(BASE_URL)
 	curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable=traefik --disable=servicelb" sh -
 	sudo mkdir -p $(dir $(KUBECONFIG))
 	sudo cp /etc/rancher/k3s/k3s.yaml $(KUBECONFIG)
 	sudo chmod 644 $(KUBECONFIG)
-	sudo envsubst < config/k3s.yml.tpl > /etc/rancher/k3s/registries.yaml
+	envsubst < config/k3s.yml.tpl > /tmp/registries.yaml
+	sudo mv /tmp/registries.yaml /etc/rancher/k3s/registries.yaml
 	sudo systemctl restart k3s
 
 sysctl:
@@ -235,9 +237,9 @@ lagoon-core:
 	    --set lagoonSeedUsername="$(SEED_USERNAME)" \
             --set lagoonSeedPassword=$(SEED_PASSWORD) \
             --set lagoonSeedOrganization=$(SEED_ORG) \
-	    --set lagoonAPIURL="http://api.$(BASE_URL)/graphql" \
-            --set keycloakFrontEndURL="http://keycloak.$(BASE_URL)" \
-            --set lagoonUIURL="http://dashboard.$(BASE_URL)" \
+	    --set lagoonAPIURL="https://api.$(BASE_URL)/graphql" \
+            --set keycloakFrontEndURL="https://keycloak.$(BASE_URL)" \
+            --set lagoonUIURL="https://dashboard.$(BASE_URL)" \
 	    --set harborURL="http://harbor.$(BASE_URL)" \
 	    --set harborAdminPassword=password \
 	    --set s3BAASAccessKeyID=admin \
@@ -245,7 +247,7 @@ lagoon-core:
             --set s3FilesAccessKeyID=admin \
             --set s3FilesSecretAccessKey=password \
             --set s3FilesBucket=lagoon-files \
-            --set s3FilesHost="http://minioapi.$(BASE_URL)" \
+            --set s3FilesHost="https://minioapi.$(BASE_URL)" \
 	    --set elasticsearchURL="not-real-but-necessary.example.com" \
 	    --set kibanaURL="not-real-but-necessary.example.com" \
 	    --set keycloak.serviceMonitor.enabled=false \
@@ -276,7 +278,7 @@ lagoon-core:
             --set broker.ingress.hosts[0].paths[0]="/" \
 	    --set ssh.service.type=LoadBalancer \
 	    --set ssh.service.port=2020 \
-	    --set sshToken.enabled=true \
+	    --set sshToken.enabled=false \
 	    --set sshToken.serviceMonitor.enabled=false \
 	    --set sshToken.service.type=LoadBalancer \
 	    --set sshToken.service.ports.sshserver=2223 \
